@@ -1,0 +1,11 @@
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+*.mkv
+*.mka
+*.mp4
+*.wav
+batch_report.json

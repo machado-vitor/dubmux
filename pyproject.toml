@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dubmux"
+version = "0.1.0"
+description = "Graft a dubbed audio track onto a better video release, in sync, without re-encoding the video."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Vitor Machado" }]
+requires-python = ">=3.9"
+dependencies = ["numpy", "scipy"]
+keywords = ["ffmpeg", "mkvmerge", "audio", "sync", "dub", "remux"]
+
+[project.urls]
+Homepage = "https://github.com/machado-vitor/dubmux"
+
+[project.scripts]
+dubmux = "dubmux:main"
+batch_season = "batch_season:main"
+
+[tool.setuptools]
+py-modules = ["dubmux", "batch_season"]
