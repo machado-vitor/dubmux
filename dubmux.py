@@ -225,6 +225,13 @@ def offset_at(target, t_idx, donor, d_idx, start, dur, search_s, guess=0.0,
         return None, 0.0
     if MATCH_MODE["v"] == "phat":
         tgt, don = raw_t, raw_d
+        # The lag search needs the donor window to cover the target window. A
+        # donor cut short (end of file, or a still-downloading donor whose
+        # missing pieces decode to nothing) would make the slice below negative:
+        # it then keeps most of the circular correlation, and its argmax indexes
+        # past `lags`. No valid lag exists, so report no measurement.
+        if don.size < tgt.size:
+            return None, 0.0
         n = 1 << int(np.ceil(np.log2(don.size + tgt.size)))
         cross = np.fft.rfft(don, n) * np.conj(np.fft.rfft(tgt, n))
         cross /= np.abs(cross) + 1e-12
