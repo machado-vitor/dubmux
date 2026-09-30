@@ -352,6 +352,7 @@ def find_speed(target, donor, t_idx, d_idx, info_t, info_d, search_s):
     # meant giving up, the real answer sitting second in the list was thrown
     # away and every segment came out seconds wrong.
     named = (PAL_RATIO, 1 / PAL_RATIO)
+    nominal = next((c for c in scored if abs(c["sp"] - 1.0) < 1e-6), None)
     for cand in sorted(scored, key=lambda x: x["spread"]):
         sp = cand["sp"]
         # Confidence gates everything. A named ratio is exempt from the
@@ -361,6 +362,16 @@ def find_speed(target, donor, t_idx, d_idx, info_t, info_d, search_s):
         # Demand a genuinely good lock before honouring any non-nominal speed.
         if abs(sp - 1.0) < 1e-6:
             return sp, cand["spread"]
+        # A needed stretch SHARPENS the lock, so the right speed never
+        # correlates far worse than nominal. A candidate that does is fitting
+        # something else: typically the file-length ratio of a donor that just
+        # has a few extra seconds of intro or credits. Accepted, that stretch
+        # makes the offset creep ~60 ms every 24 s and the per-segment resync
+        # undoes it with dozens of splices.
+        if nominal is not None and nominal["conf"] >= 2 * cand["conf"]:
+            print(f"  (ignoring {sp:.6f}: nominal speed locks far better, "
+                  f"confidence {nominal['conf']:.1f} vs {cand['conf']:.1f})")
+            continue
         # A physical ratio whose two far-apart probes land on the SAME offset
         # (within 40 ms over ~15 min) is proof on its own: a wrong candidate
         # gives random offsets, not two equal ones. Without an anchor (dub vs
@@ -377,10 +388,14 @@ def find_speed(target, donor, t_idx, d_idx, info_t, info_d, search_s):
             return sp, cand["spread"]        # physical ratio, confidently matched
         om, cm = offset_at(target, t_idx, donor, d_idx, mid, WINDOW_S, search_s,
                            cand["oa"], sp)
-        if om is None or cm < 1.2 or abs(om - cand["oa"]) * 1000 <= 60:
+        # the middle has to CONFIRM a fitted speed: no measurement is no proof
+        if om is not None and cm >= 1.2 and abs(om - cand["oa"]) * 1000 <= 60:
             return sp, cand["spread"]
-        print(f"  (discarding {sp:.6f}: ends match but the middle "
-              f"is {abs(om-cand['oa'])*1000:.0f} ms off — a step)")
+        if om is None or cm < 1.2:
+            print(f"  (discarding {sp:.6f}: the mid-runtime probe cannot confirm it)")
+        else:
+            print(f"  (discarding {sp:.6f}: ends match but the middle "
+                  f"is {abs(om-cand['oa'])*1000:.0f} ms off — a step)")
     return 1.0, 1e9
 
 
